@@ -3,6 +3,7 @@ use clap::{Arg, ArgAction, Command};
 use chrono::Utc;
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use std::fs::{create_dir_all, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
@@ -17,6 +18,8 @@ struct HistoryEntry {
 #[derive(Deserialize)]
 struct OpenRouterChoiceMessage {
     content: String,
+    // OpenRouter may include a reasoning object on the message
+    reasoning: Option<JsonValue>,
 }
 
 #[derive(Deserialize)]
@@ -178,9 +181,6 @@ async fn main() -> Result<()> {
         .unwrap_or("low");
     let show_reasoning = matches.get_flag("show-reasoning");
 
-    // Attach reasoning as a system instruction hint
-    messages.push(serde_json::json!({"role": "system", "content": format!("reasoning_effort: {}", effort)}));
-
     // Append the initial user prompt
     messages.push(serde_json::json!({"role": "user", "content": prompt}));
 
@@ -189,7 +189,8 @@ async fn main() -> Result<()> {
         println!("Entering interactive chat mode. Type '/exit' or empty line to quit.");
         // messages already contains any system instructions (none in interactive) and the first user prompt
         loop {
-            let body = serde_json::json!({"model": model, "messages": messages});
+            // Include top-level reasoning object following OpenRouter's API (e.g. { "reasoning": { "effort": "high" } })
+            let body = serde_json::json!({"model": model, "messages": messages, "reasoning": {"effort": effort}});
             let cli_output = query_openrouter(&api_key, &body).await.unwrap_or_else(|e| {
                 eprintln!("LLM request failed: {}", e);
                 std::process::exit(1);
@@ -224,34 +225,26 @@ async fn main() -> Result<()> {
             messages.push(serde_json::json!({"role": "user", "content": line}));
         }
     } else {
-        let body = serde_json::json!({"model": model, "messages": messages});
+        // Include top-level reasoning object following OpenRouter's API
+        let body = serde_json::json!({"model": model, "messages": messages, "reasoning": {"effort": effort}});
 
         let cli_output = query_openrouter(&api_key, &body).await.unwrap_or_else(|e| {
             eprintln!("LLM request failed: {}", e);
             std::process::exit(1);
         });
+        // The API returns choices[].message.content and may include choices[].message.reasoning
+        let choice = cli_output.choices.get(0);
+        let command = choice.map(|c| c.message.content.clone()).unwrap_or_default();
 
-        // The API returns choices[].message.content
-        let command = cli_output
-            .choices
-            .get(0)
-            .map(|c| c.message.content.clone())
-            .unwrap_or_default();
-
-        // Optionally ask the model to append reasoning in a JSON object when show_reasoning is true.
-        let (out, reasoning_json) = if show_reasoning {
-            // We expect the model to return something like: <command>\n{"reasoning": "..."}
-            let s = command.clone();
-            // Try to split last line as JSON
-            if let Some(pos) = s.rfind('\n') {
-                let (cmd_part, json_part) = s.split_at(pos);
-                (cmd_part.trim().to_string(), Some(json_part.trim().to_string()))
-            } else {
-                (s.trim().to_string(), None)
-            }
+        // Grab reasoning from the parsed response if available
+        let reasoning_json = if show_reasoning {
+            choice
+                .and_then(|c| c.message.reasoning.clone())
         } else {
-            (command.trim().to_string(), None)
+            None
         };
+
+        let out = command.trim().to_string();
 
         // Minimal: print only the command (out was derived above)
         if is_not_able_response(&out) {
@@ -274,9 +267,34 @@ async fn main() -> Result<()> {
             save_history(&prompt, &out)?;
         }
 
-        if let Some(js) = reasoning_json {
-            // Print reasoning JSON on the next line (uncopied)
-            println!("{}", js);
+        if let Some(js_val) = reasoning_json {
+            // Normalize the reasoning output to the canonical form: {"reasoning": "..."}
+            // If the model returned a string, wrap it. If it returned an object that includes
+            // a `reasoning` key, prefer that. Otherwise stringify the object and wrap it.
+            let final_obj = if js_val.is_string() {
+                let s = js_val.as_str().unwrap_or_default();
+                serde_json::json!({"reasoning": s})
+            } else if js_val.is_object() {
+                // If it already contains a `reasoning` key, use as-is
+                if js_val.get("reasoning").is_some() {
+                    js_val
+                } else {
+                    // Fallback: stringify the object and place under `reasoning`
+                    let s = serde_json::to_string(&js_val).unwrap_or_else(|_| js_val.to_string());
+                    serde_json::json!({"reasoning": s})
+                }
+            } else {
+                // Other types (numbers, arrays, etc.) - stringify and wrap
+                let s = serde_json::to_string(&js_val).unwrap_or_else(|_| js_val.to_string());
+                serde_json::json!({"reasoning": s})
+            };
+
+            // Print compact single-line JSON to match README examples
+            if let Ok(s) = serde_json::to_string(&final_obj) {
+                println!("{}", s);
+            } else {
+                println!("{}", final_obj);
+            }
         }
     }
 
