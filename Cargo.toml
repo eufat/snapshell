@@ -5,6 +5,10 @@ edition = "2021"
 authors = ["Eufrat Tsaqib <eutsat@gmail.com>"]
 description = "snapshell - a snappy CLI that generates shell commands via OpenRouter LLMs"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/eufat/snapshell"
+homepage = "https://github.com/eufat/snapshell"
+readme = "README.md"
+documentation = "https://docs.rs/snapshell"
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }
