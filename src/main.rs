@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
             Arg::new("reasoning")
                 .short('r')
                 .long("reasoning")
-                .help("Enable reasoning verbosity level (small integer)")
+                .help("Reasoning effort: low, medium, or high (default: low)")
                 .num_args(1),
         )
         .arg(
@@ -87,6 +87,13 @@ async fn main() -> Result<()> {
                 .long("system-multiline")
                 .help("Custom system instruction for multiline mode")
                 .num_args(1),
+        )
+        .arg(
+            Arg::new("show-reasoning")
+                .short('S')
+                .long("show-reasoning")
+                .help("Include model reasoning in output as a trailing JSON object {\"reasoning\": \"...\"}")
+                .action(ArgAction::SetTrue),
         )
         .get_matches();
 
@@ -164,9 +171,15 @@ async fn main() -> Result<()> {
     messages.push(serde_json::json!({"role": "system", "content": sys}));
     }
 
-    if let Some(r) = matches.get_one::<String>("reasoning") {
-        messages.push(serde_json::json!({"role": "system", "content": format!("reasoning_level: {}", r)}));
-    }
+    // Determine reasoning settings (OpenAI-style 'effort')
+    let effort = matches
+        .get_one::<String>("reasoning")
+        .map(|s| s.as_str())
+        .unwrap_or("low");
+    let show_reasoning = matches.get_flag("show-reasoning");
+
+    // Attach reasoning as a system instruction hint
+    messages.push(serde_json::json!({"role": "system", "content": format!("reasoning_effort: {}", effort)}));
 
     // Append the initial user prompt
     messages.push(serde_json::json!({"role": "user", "content": prompt}));
@@ -190,6 +203,8 @@ async fn main() -> Result<()> {
 
             // Print assistant response
             println!("{}", response.trim());
+
+            // If show_reasoning is requested, the model may include a trailing reasoning field; print nothing here — interactive mode shows full assistant response.
 
             // Append assistant message to conversation
             messages.push(serde_json::json!({"role": "assistant", "content": response}));
@@ -223,8 +238,22 @@ async fn main() -> Result<()> {
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
 
-        // Minimal: print only the command
-        let out = command.trim().to_string();
+        // Optionally ask the model to append reasoning in a JSON object when show_reasoning is true.
+        let (out, reasoning_json) = if show_reasoning {
+            // We expect the model to return something like: <command>\n{"reasoning": "..."}
+            let s = command.clone();
+            // Try to split last line as JSON
+            if let Some(pos) = s.rfind('\n') {
+                let (cmd_part, json_part) = s.split_at(pos);
+                (cmd_part.trim().to_string(), Some(json_part.trim().to_string()))
+            } else {
+                (s.trim().to_string(), None)
+            }
+        } else {
+            (command.trim().to_string(), None)
+        };
+
+        // Minimal: print only the command (out was derived above)
         if is_not_able_response(&out) {
             // Uncopyable message: print but do not copy to clipboard or save to history
             println!("{}", out);
@@ -243,6 +272,11 @@ async fn main() -> Result<()> {
 
             // Save history
             save_history(&prompt, &out)?;
+        }
+
+        if let Some(js) = reasoning_json {
+            // Print reasoning JSON on the next line (uncopied)
+            println!("{}", js);
         }
     }
 

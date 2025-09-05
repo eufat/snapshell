@@ -124,6 +124,31 @@ ss --system-multiline "Multiline-allowed instruction" -L "do Y"
 ss -H
 ```
 
+Reasoning
+---------
+
+snapshell supports an optional lightweight "reasoning" hint (OpenAI-style `effort`) you can request from the model.
+
+- `-r, --reasoning <low|medium|high>` — set the reasoning effort. Default: `low`.
+- `-S, --show-reasoning` — when set, the model may append a trailing JSON object containing the model's short reasoning, printed on the line after the command as:
+
+```json
+{"reasoning": "short one-sentence reason here"}
+```
+
+Notes:
+- Reasoning is not printed by default; only enable it with `-S` when you want an explanation.
+- The reasoning line is not copied to the clipboard and is not saved to history; only the generated command is copied/saved.
+- Example:
+
+```bash
+ss -r high -S "why can't I install TensorRT on macOS?"
+# output:
+# (NOT ABLE TO ANSWER): TensorRT requires NVIDIA GPUs and is not available on macOS.
+#{"reasoning": "TensorRT depends on NVIDIA GPU drivers not present on macOS"}
+```
+
+
 Environment variables
 ---------------------
 
