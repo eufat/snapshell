@@ -1,6 +1,8 @@
 # snapshell (ss)
 
-Minimal snappy shell command generator.
+Minimal and snappy shell command generator with LLM/AI. 
+
+Alternative to GitHub Copilot `ghcs`, snapshell quickly generates shell commands using your preferred LLM/AI via OpenRouter.
 
 Install
 -------

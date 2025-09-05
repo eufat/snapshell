@@ -1,6 +1,6 @@
 [package]
 name = "snapshell"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Eufrat Tsaqib <eutsat@gmail.com>"]
 description = "snapshell - a snappy CLI that generates shell commands via OpenRouter LLMs"
