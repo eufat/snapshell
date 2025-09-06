@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
             Arg::new("model")
                 .short('m')
                 .long("model")
-                .help("Model to use (defaults to openai/gpt-oss-20b)")
+                .help("Model to use (defaults to openai/gpt-oss-120b)")
                 .num_args(1),
         )
         .arg(
@@ -129,7 +129,7 @@ async fn main() -> Result<()> {
         .get_one::<String>("model")
         .map(|s| s.to_string())
         .or_else(|| std::env::var("SNAPSHELL_OPENROUTER_MODEL").ok())
-        .unwrap_or_else(|| "openai/gpt-oss-20b".to_string());
+        .unwrap_or_else(|| "openai/gpt-oss-120b".to_string());
 
     // Read SNAPSHELL_OPENROUTER_API_KEY from env or config (intentionally not backwards-compatible)
     let api_key = std::env::var("SNAPSHELL_OPENROUTER_API_KEY").unwrap_or_default();

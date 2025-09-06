@@ -7,11 +7,33 @@ Alternative to GitHub Copilot `ghcs`, snapshell quickly generates shell commands
 Install
 -------
 
-Build and symlink to `ss`:
+Install via crates.io (recommended):
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+
+cargo install snapshell
+```
+
+Set up PATH and symlink (optional):
+
+```bash
+# The binary is installed to ~/.cargo/bin by default; make sure it's on your PATH:
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# Optionally create a global symlink so the command is `ss`:
+ln -s "$HOME/.cargo/bin/snapshell" /usr/local/bin/ss
+```
+
+Build
+-------
+
+Build from source and symlink to `ss`:
 
 ```bash
 cargo build --release
-ln -s "$(pwd)/target/release/snapshell" /usr/local/bin/ss
+# Use sudo if /usr/local/bin requires elevated permissions
+sudo ln -s "$(pwd)/target/release/snapshell" /usr/local/bin/ss
 ```
 
 OpenRouter configuration
@@ -19,41 +41,47 @@ OpenRouter configuration
 
 Before using snapshell with LLM features, configure OpenRouter:
 
-
-- Export your API key for the session:
+- Export your API key (and optional model) for the session:
 
 ```bash
 export SNAPSHELL_OPENROUTER_API_KEY="your_openrouter_api_key"
+export SNAPSHELL_OPENROUTER_MODEL="openai/gpt-oss-120b"  # optional override, e.g. meta-llama/llama-3.3-8b-instruct:free
 ```
 
 - Or create a `.env` file based on `.env.example` and load it with your shell or a tool like `direnv`:
 
 ```bash
 cp .env.example .env
-# edit .env and add your key
+# edit .env and add your key and optional model:
+# SNAPSHELL_OPENROUTER_API_KEY=your_openrouter_api_key
+# SNAPSHELL_OPENROUTER_MODEL=openai/gpt-oss-120b
 export $(cat .env | xargs)
 ```
+
 
 Permanent setup (bash / zsh)
 ---------------------------
 
-To make the key permanent, add the export to your shell startup file.
-
+To make the key (and optional model) permanent, add the exports to your shell startup file.
 
 For bash (`~/.bashrc` or `~/.profile`):
 
 ```bash
 echo 'export SNAPSHELL_OPENROUTER_API_KEY="your_openrouter_api_key"' >> ~/.bashrc
+echo 'export SNAPSHELL_OPENROUTER_MODEL="openai/gpt-oss-120b"' >> ~/.bashrc
 # or
 echo 'export SNAPSHELL_OPENROUTER_API_KEY="your_openrouter_api_key"' >> ~/.profile
+echo 'export SNAPSHELL_OPENROUTER_MODEL="openai/gpt-oss-120b"' >> ~/.profile
 ```
 
 For zsh (`~/.zshrc` or `~/.zprofile`):
 
 ```bash
 echo 'export SNAPSHELL_OPENROUTER_API_KEY="your_openrouter_api_key"' >> ~/.zshrc
+echo 'export SNAPSHELL_OPENROUTER_MODEL="openai/gpt-oss-120b"' >> ~/.zshrc
 # or
 echo 'export SNAPSHELL_OPENROUTER_API_KEY="your_openrouter_api_key"' >> ~/.zprofile
+echo 'export SNAPSHELL_OPENROUTER_MODEL="openai/gpt-oss-120b"' >> ~/.zprofile
 ```
 
 After editing, reload your shell or source the file:
@@ -101,10 +129,10 @@ ss -a "how to list modified rust files since yesterday?"
 # After response, type follow-up questions at the `>` prompt
 ```
 
-- Use a low-latency provider model:
+- Use a low-latency free model:
 
 ```bash
-ss -m "groq/fast-model" "list files modified today"
+ss -m "meta-llama/llama-3.3-8b-instruct:free" "list files modified today"
 ```
 
 - Override the default system instruction (applies to both modes unless more specific):
@@ -147,7 +175,7 @@ Notes:
 ss -r high -S "why can't I install TensorRT on macOS?"
 # output:
 # (NOT ABLE TO ANSWER): TensorRT requires NVIDIA GPUs and is not available on macOS.
-#{"reasoning": "TensorRT depends on NVIDIA GPU drivers not present on macOS"}
+# {"reasoning": "TensorRT depends on NVIDIA GPU drivers not present on macOS"}
 ```
 
 
@@ -169,11 +197,13 @@ This tool is integrated with OpenRouter. Provide your OpenRouter API key via the
 You can control the model used in two ways (priority order):
 
 1. CLI: pass `-m 'provider/model'` to `ss`.
-2. Environment: set `SNAPSHELL_OPENROUTER_MODEL` (for example `openai/gpt-oss-20b` or `groq/fast-model`).
+2. Environment: set `SNAPSHELL_OPENROUTER_MODEL` (for example `openai/gpt-oss-120b` or `groq/fast-model`).
 
-If neither is set, snapshell falls back to the built-in default `openai/gpt-oss-20b`.
+If neither is set, snapshell falls back to the built-in default `openai/gpt-oss-120b`.
 
-For the instant result, lowest-latency replies providers recommended are [Groq](https://openrouter.ai/provider/groq) or [Cerebras](https://openrouter.ai/provider/cerebras) when available, you can enforce this provider in Open Router: Settings > Account > Allowed Providers > Select a provider (also tick the 'Always enforce' checkbox)
+For the instant result, lowest-latency replies providers recommended are [Groq](https://openrouter.ai/provider/groq) and [Cerebras](https://openrouter.ai/provider/cerebras) when available, this provider use specialized inference hardware that can significantly speed up response times with 1K tokens/second. 
+
+You can enforce this provider in Open Router: Settings > Account > Allowed Providers > Select a provider, you can select both [Groq](https://openrouter.ai/provider/groq) and [Cerebras](https://openrouter.ai/provider/cerebras). Also tick the 'Always enforce' checkbox.
 
 History
 -------
