@@ -124,10 +124,12 @@ async fn main() -> Result<()> {
         }
     };
 
+    // Model selection priority: CLI flag (-m) > SNAPSHELL_OPENROUTER_MODEL env var > built-in default
     let model = matches
         .get_one::<String>("model")
-        .map(|s| s.as_str())
-        .unwrap_or("openai/gpt-oss-20b");
+        .map(|s| s.to_string())
+        .or_else(|| std::env::var("SNAPSHELL_OPENROUTER_MODEL").ok())
+        .unwrap_or_else(|| "openai/gpt-oss-20b".to_string());
 
     // Read SNAPSHELL_OPENROUTER_API_KEY from env or config (intentionally not backwards-compatible)
     let api_key = std::env::var("SNAPSHELL_OPENROUTER_API_KEY").unwrap_or_default();

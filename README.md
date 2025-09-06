@@ -164,7 +164,14 @@ See `.env.example` for a sample env file.
 OpenRouter integration
 ----------------------
 
-This tool is integrated with OpenRouter. Provide your OpenRouter API key via `OPENROUTER_API_KEY`. The default model is `openai/gpt-oss-20b`. You can select a different model with `-m 'provider/model'`. 
+This tool is integrated with OpenRouter. Provide your OpenRouter API key via the environment variable `SNAPSHELL_OPENROUTER_API_KEY`.
+
+You can control the model used in two ways (priority order):
+
+1. CLI: pass `-m 'provider/model'` to `ss`.
+2. Environment: set `SNAPSHELL_OPENROUTER_MODEL` (for example `openai/gpt-oss-20b` or `groq/fast-model`).
+
+If neither is set, snapshell falls back to the built-in default `openai/gpt-oss-20b`.
 
 For the instant result, lowest-latency replies providers recommended are [Groq](https://openrouter.ai/provider/groq) or [Cerebras](https://openrouter.ai/provider/cerebras) when available, you can enforce this provider in Open Router: Settings > Account > Allowed Providers > Select a provider (also tick the 'Always enforce' checkbox)
 
