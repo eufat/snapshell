@@ -73,6 +73,14 @@ async fn main() -> Result<()> {
                 .action(ArgAction::SetTrue),
         )
         .arg(
+            Arg::new("pt")
+                .long("pt")
+                .help("Prettify table output: true|false (default: true). When true, instruct model to format tables in psql-style ASCII tables (no markdown). Use --pt=false to disable.")
+                .num_args(1)
+                .value_parser(["true", "false"]) 
+                .default_value("true"),
+        )
+        .arg(
             Arg::new("system")
                 .short('s')
                 .long("system")
@@ -152,6 +160,7 @@ async fn main() -> Result<()> {
     // Prepare messages vector. If not interactive, choose a system instruction using priority:
     // CLI specific > CLI generic > ENV specific > ENV generic > built-in default.
     let mut messages = Vec::new();
+
     if !interactive {
     let default_single = "You are a strict shell command generator. OUTPUT ONLY shell commands or shell syntax in plain text with no explanations, no commentary, and no additional prose. DO NOT output any markdown, code fences, backticks, or formatting of any kind. The entire response MUST be a single-line shell command with no extra text. Never add numbering, bullets, examples, or any text before or after the command. If you do NOT know the correct command, respond exactly with the following format and nothing else: (NOT ABLE TO ANSWER): <one-sentence reason> — the reason should be a single short sentence explaining why the command cannot be provided. Always respond only with the shell command(s) or the one-line failure phrase in the format above.";
     let default_multi = "You are a strict shell command generator. OUTPUT ONLY shell commands or shell syntax in plain text with no explanations, no commentary, and no additional prose. DO NOT output any markdown, code fences, backticks, or formatting of any kind. Multi-line shell scripts are allowed when necessary. Never add numbering, bullets, examples, or any text before or after the command. If you do NOT know the correct command, respond exactly with the following format and nothing else: (NOT ABLE TO ANSWER): <one-sentence reason> — the reason should be a single short sentence explaining why the command cannot be provided. Always respond only with the shell command(s) or the one-line failure phrase in the format above.";
@@ -174,6 +183,21 @@ async fn main() -> Result<()> {
     sys.push_str(&env_note);
 
     messages.push(serde_json::json!({"role": "system", "content": sys}));
+    }
+
+    // If interactive mode is enabled, provide a terse system instruction that constrains length and optionally requests psql-style tables
+    if interactive {
+        // detect prettify table flag (default true) - only used in interactive mode
+        let prettify_table = matches
+            .get_one::<String>("pt")
+            .map(|s| s.as_str() == "true")
+            .unwrap_or(true);
+
+        let mut inter_sys = String::from("You are an assistant for a CLI tool. Keep replies very brief (max 1-2 short paragraphs). Prioritize clarity and simplicity. Use concise sentences and avoid unnecessary explanation.");
+        if prettify_table {
+            inter_sys.push_str(" When showing tabular data, use compact psql-style ASCII tables (no markdown or code fences) so output fits in a terminal.");
+        }
+        messages.push(serde_json::json!({"role": "system", "content": inter_sys}));
     }
 
     // Determine reasoning settings (OpenAI-style 'effort')
