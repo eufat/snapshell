@@ -1,11 +1,10 @@
 # snapshell (ss)
 
-Minimal and snappy shell command generator with LLM/AI. 
+Minimal and snappy shell command generator with LLM/AI.
 
 Alternative to GitHub Copilot `ghcs`, snapshell quickly generates shell commands using your preferred LLM/AI via OpenRouter.
 
-Install
--------
+## Install
 
 Install via crates.io (recommended):
 
@@ -25,8 +24,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 ln -s "$HOME/.cargo/bin/snapshell" /usr/local/bin/ss
 ```
 
-Build
--------
+## Build
 
 Build from source and symlink to `ss`:
 
@@ -36,8 +34,7 @@ cargo build --release
 sudo ln -s "$(pwd)/target/release/snapshell" /usr/local/bin/ss
 ```
 
-OpenRouter configuration
-------------------------
+## OpenRouter configuration
 
 Before using snapshell with LLM features, configure OpenRouter:
 
@@ -58,9 +55,7 @@ cp .env.example .env
 export $(cat .env | xargs)
 ```
 
-
-Permanent setup (bash / zsh)
----------------------------
+## Permanent setup (bash / zsh)
 
 To make the key (and optional model) permanent, add the exports to your shell startup file.
 
@@ -90,25 +85,22 @@ After editing, reload your shell or source the file:
 source ~/.bashrc   # or source ~/.zshrc
 ```
 
-
-Quick usage
------------
+## Quick usage
 
 - `ss 'describe what shell command you want'`
-	- Generate a single-line shell command, print it, copy to macOS clipboard, and save to history.
+  - Generate a single-line shell command, print it, copy to macOS clipboard, and save to history.
 - `ss -a 'chat with the model'`
-	- Enter interactive chat mode; you can continue asking follow-ups. Type `/exit` or empty line to quit.
+  - Enter interactive chat mode; you can continue asking follow-ups. Type `/exit` or empty line to quit.
 - `ss -r 2 'use reasoning level 2'`
-	- Attach a reasoning hint to the model.
+  - Attach a reasoning hint to the model.
 - `ss -m 'provider/model' 'ask'`
-	- Override the model (use provider-specific model strings like `groq/...` or `cerebras/...`).
+  - Override the model (use provider-specific model strings like `groq/...` or `cerebras/...`).
 - `ss -L 'ask'`
-	- Allow multiline script output instead of forcing one-liner.
+  - Allow multiline script output instead of forcing one-liner.
 - `ss -H`
-	- Print saved history entries.
+  - Print saved history entries.
 
-Flags & examples
------------------
+## Flags & examples
 
 - Default single-line mode (default behavior):
 
@@ -154,8 +146,7 @@ ss --system-multiline "Multiline-allowed instruction" -L "do Y"
 ss -H
 ```
 
-Reasoning
----------
+## Reasoning
 
 snapshell supports an optional lightweight "reasoning" hint (OpenAI-style `effort`) you can request from the model.
 
@@ -163,10 +154,11 @@ snapshell supports an optional lightweight "reasoning" hint (OpenAI-style `effor
 - `-S, --show-reasoning` — when set, the model may append a trailing JSON object containing the model's short reasoning, printed on the line after the command as:
 
 ```json
-{"reasoning": "short one-sentence reason here"}
+{ "reasoning": "short one-sentence reason here" }
 ```
 
 Notes:
+
 - Reasoning is not printed by default; only enable it with `-S` when you want an explanation.
 - The reasoning line is not copied to the clipboard and is not saved to history; only the generated command is copied/saved.
 - Example:
@@ -178,9 +170,7 @@ ss -r high -S "why can't I install TensorRT on macOS?"
 # {"reasoning": "TensorRT depends on NVIDIA GPU drivers not present on macOS"}
 ```
 
-
-Environment variables
----------------------
+## Environment variables
 
 - `SNAPSHELL_OPENROUTER_API_KEY` — API key for OpenRouter (required to call remote LLM).
 - `SNAPSHELL_SYSTEM` — generic system instruction override.
@@ -189,8 +179,7 @@ Environment variables
 
 See `.env.example` for a sample env file.
 
-OpenRouter integration
-----------------------
+## OpenRouter integration
 
 This tool is integrated with OpenRouter. Provide your OpenRouter API key via the environment variable `SNAPSHELL_OPENROUTER_API_KEY`.
 
@@ -201,17 +190,15 @@ You can control the model used in two ways (priority order):
 
 If neither is set, snapshell falls back to the built-in default `openai/gpt-oss-120b`.
 
-For the instant result, lowest-latency replies providers recommended are [Groq](https://openrouter.ai/provider/groq) and [Cerebras](https://openrouter.ai/provider/cerebras) when available, this provider use specialized inference hardware that can significantly speed up response times with 1K tokens/second. 
+For the instant result, lowest-latency replies providers recommended are [Groq](https://openrouter.ai/provider/groq) and [Cerebras](https://openrouter.ai/provider/cerebras) when available, this provider use specialized inference hardware that can significantly speed up response times with 1K tokens/second.
 
 You can enforce this provider in Open Router: Settings > Account > Allowed Providers > Select a provider, you can select both [Groq](https://openrouter.ai/provider/groq) and [Cerebras](https://openrouter.ai/provider/cerebras). Also tick the 'Always enforce' checkbox.
 
-History
--------
+## History
 
 History is saved as `history.jsonl` in your OS data dir and contains timestamp, prompt, and generated command. Use `ss -H` to view.
 
-Notes
------
+## Notes
 
 - Minimal, fast, designed to return only shell commands by default.
 - If the model returns extra text, use `-s`/`--system-single`/`--system-multiline` to tighten instructions.

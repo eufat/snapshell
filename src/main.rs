@@ -1,6 +1,6 @@
 use anyhow::Result;
-use clap::{Arg, ArgAction, Command};
 use chrono::Utc;
+use clap::{Arg, ArgAction, Command};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
                 .long("pt")
                 .help("Prettify table output: true|false (default: true). When true, instruct model to format tables in psql-style ASCII tables (no markdown). Use --pt=false to disable.")
                 .num_args(1)
-                .value_parser(["true", "false"]) 
+                .value_parser(["true", "false"])
                 .default_value("true"),
         )
         .arg(
@@ -150,8 +150,12 @@ async fn main() -> Result<()> {
 
     // Read optional custom system instructions from CLI or env vars.
     let cli_system = matches.get_one::<String>("system").map(|s| s.as_str());
-    let cli_system_single = matches.get_one::<String>("system-single").map(|s| s.as_str());
-    let cli_system_multi = matches.get_one::<String>("system-multiline").map(|s| s.as_str());
+    let cli_system_single = matches
+        .get_one::<String>("system-single")
+        .map(|s| s.as_str());
+    let cli_system_multi = matches
+        .get_one::<String>("system-multiline")
+        .map(|s| s.as_str());
 
     let env_system = std::env::var("SNAPSHELL_SYSTEM").ok();
     let env_system_single = std::env::var("SNAPSHELL_SYSTEM_SINGLE").ok();
@@ -162,27 +166,38 @@ async fn main() -> Result<()> {
     let mut messages = Vec::new();
 
     if !interactive {
-    let default_single = "You are a strict shell command generator. OUTPUT ONLY shell commands or shell syntax in plain text with no explanations, no commentary, and no additional prose. DO NOT output any markdown, code fences, backticks, or formatting of any kind. The entire response MUST be a single-line shell command with no extra text. Never add numbering, bullets, examples, or any text before or after the command. If you do NOT know the correct command, respond exactly with the following format and nothing else: (NOT ABLE TO ANSWER): <one-sentence reason> — the reason should be a single short sentence explaining why the command cannot be provided. Always respond only with the shell command(s) or the one-line failure phrase in the format above.";
-    let default_multi = "You are a strict shell command generator. OUTPUT ONLY shell commands or shell syntax in plain text with no explanations, no commentary, and no additional prose. DO NOT output any markdown, code fences, backticks, or formatting of any kind. Multi-line shell scripts are allowed when necessary. Never add numbering, bullets, examples, or any text before or after the command. If you do NOT know the correct command, respond exactly with the following format and nothing else: (NOT ABLE TO ANSWER): <one-sentence reason> — the reason should be a single short sentence explaining why the command cannot be provided. Always respond only with the shell command(s) or the one-line failure phrase in the format above.";
+        let default_single = "You are a strict shell command generator. OUTPUT ONLY shell commands or shell syntax in plain text with no explanations, no commentary, and no additional prose. DO NOT output any markdown, code fences, backticks, or formatting of any kind. The entire response MUST be a single-line shell command with no extra text. Never add numbering, bullets, examples, or any text before or after the command. If you do NOT know the correct command, respond exactly with the following format and nothing else: (NOT ABLE TO ANSWER): <one-sentence reason> — the reason should be a single short sentence explaining why the command cannot be provided. Always respond only with the shell command(s) or the one-line failure phrase in the format above.";
+        let default_multi = "You are a strict shell command generator. OUTPUT ONLY shell commands or shell syntax in plain text with no explanations, no commentary, and no additional prose. DO NOT output any markdown, code fences, backticks, or formatting of any kind. Multi-line shell scripts are allowed when necessary. Never add numbering, bullets, examples, or any text before or after the command. If you do NOT know the correct command, respond exactly with the following format and nothing else: (NOT ABLE TO ANSWER): <one-sentence reason> — the reason should be a single short sentence explaining why the command cannot be provided. Always respond only with the shell command(s) or the one-line failure phrase in the format above.";
 
-    let mut sys = if let Some(s) = cli_system { s.to_string() }
-        else if allow_multiline {
-            if let Some(s) = cli_system_multi { s.to_string() }
-            else if let Some(s) = env_system_multi { s }
-            else if let Some(s) = env_system.clone() { s }
-            else { default_multi.to_string() }
+        let mut sys = if let Some(s) = cli_system {
+            s.to_string()
+        } else if allow_multiline {
+            if let Some(s) = cli_system_multi {
+                s.to_string()
+            } else if let Some(s) = env_system_multi {
+                s
+            } else if let Some(s) = env_system.clone() {
+                s
+            } else {
+                default_multi.to_string()
+            }
         } else {
-            if let Some(s) = cli_system_single { s.to_string() }
-            else if let Some(s) = env_system_single.clone() { s }
-            else if let Some(s) = env_system.clone() { s }
-            else { default_single.to_string() }
+            if let Some(s) = cli_system_single {
+                s.to_string()
+            } else if let Some(s) = env_system_single.clone() {
+                s
+            } else if let Some(s) = env_system.clone() {
+                s
+            } else {
+                default_single.to_string()
+            }
         };
 
-    // Append detected environment note so the model tailors commands to the user's OS/distro
-    let env_note = format!(" Target environment: {}. Ensure generated commands are compatible with this environment.", detect_environment());
-    sys.push_str(&env_note);
+        // Append detected environment note so the model tailors commands to the user's OS/distro
+        let env_note = format!(" Target environment: {}. Ensure generated commands are compatible with this environment.", detect_environment());
+        sys.push_str(&env_note);
 
-    messages.push(serde_json::json!({"role": "system", "content": sys}));
+        messages.push(serde_json::json!({"role": "system", "content": sys}));
     }
 
     // If interactive mode is enabled, provide a terse system instruction that constrains length and optionally requests psql-style tables
@@ -260,12 +275,13 @@ async fn main() -> Result<()> {
         });
         // The API returns choices[].message.content and may include choices[].message.reasoning
         let choice = cli_output.choices.get(0);
-        let command = choice.map(|c| c.message.content.clone()).unwrap_or_default();
+        let command = choice
+            .map(|c| c.message.content.clone())
+            .unwrap_or_default();
 
         // Grab reasoning from the parsed response if available
         let reasoning_json = if show_reasoning {
-            choice
-                .and_then(|c| c.message.reasoning.clone())
+            choice.and_then(|c| c.message.reasoning.clone())
         } else {
             None
         };
@@ -282,7 +298,10 @@ async fn main() -> Result<()> {
             // Copy to clipboard on macOS
             #[cfg(target_os = "macos")]
             {
-                if let Ok(child) = std::process::Command::new("pbcopy").stdin(std::process::Stdio::piped()).spawn() {
+                if let Ok(child) = std::process::Command::new("pbcopy")
+                    .stdin(std::process::Stdio::piped())
+                    .spawn()
+                {
                     if let Some(mut stdin) = child.stdin {
                         let _ = stdin.write_all(out.as_bytes());
                     }
@@ -343,7 +362,8 @@ async fn query_openrouter(api_key: &str, body: &serde_json::Value) -> Result<Ope
 }
 
 fn history_path() -> Option<PathBuf> {
-    ProjectDirs::from("com", "snapshell", "snapshell").map(|d| d.data_local_dir().join("history.jsonl"))
+    ProjectDirs::from("com", "snapshell", "snapshell")
+        .map(|d| d.data_local_dir().join("history.jsonl"))
 }
 
 fn save_history(prompt: &str, command: &str) -> Result<()> {
@@ -374,7 +394,10 @@ fn print_history() -> Result<()> {
         f.read_to_string(&mut s)?;
         for line in s.lines() {
             if let Ok(entry) = serde_json::from_str::<HistoryEntry>(line) {
-                println!("{} -> {}\n  {}", entry.timestamp, entry.prompt, entry.command);
+                println!(
+                    "{} -> {}\n  {}",
+                    entry.timestamp, entry.prompt, entry.command
+                );
             }
         }
     } else {
